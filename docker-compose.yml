@@ -1,0 +1,9 @@
+services:
+  adsweb:
+    build:
+      context: .
+      dockerfile: WebADS/Dockerfile
+    ports:
+      - "8090:8080"  # Пробрасываем порт на локальный хост
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development

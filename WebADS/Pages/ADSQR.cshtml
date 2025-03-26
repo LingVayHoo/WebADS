@@ -1,0 +1,58 @@
+﻿@page
+@model WebADS.Pages.ADSQRModel
+@{
+    var addresses = Model.Addresses; // Получаем список адресов из модели
+    var store = Model.Store; // Название склада
+    var zone = Model.Zone; // Зона
+    var row = Model.Row; // Ряд
+    var place = Model.Place; // Место
+    var level = Model.Level; // Уровень
+}
+
+<div class="container">
+    <div id="address-template">
+        <!-- Заголовок с информацией -->
+        <div class="text-center">
+            <h3>@store</h3>
+            <p>Зона - @zone, Место - @row-@place-@level</p>
+        </div>
+
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Артикул</th>
+                    <th>Наименование</th>
+                    <th>Кол-во</th>
+                    <th>Торг</th>
+                    <th>Осн</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="placeAddressTableBody">
+                @if (addresses != null && addresses.Any())
+                {
+                    foreach (var address in addresses)
+                    {
+                        <tr>
+                            <td>@address.Article</td>
+                            <td>@address.ProductName</td>
+                            <td>@address.Qty</td>
+                            <td>@(address.IsSalesLocation ? "✔" : "✘")</td>
+                            <td>@(address.IsPrimaryPlace ? "✔" : "✘")</td>
+                            <td>
+                                <a href="/AdsSLM?moySkladId=@address.ProductID" class="btn btn-sm btn-primary">Выбрать</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">Нет данных</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

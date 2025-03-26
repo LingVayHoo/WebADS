@@ -1,0 +1,142 @@
+﻿@page
+@model WebADS.Pages.ADSReportsPageModel
+@{
+    ViewData["Title"] = "Отчеты";
+}
+
+<div class="container fade-in">
+    <!-- Основное содержимое (скрыто до загрузки) -->
+    <div id="content">
+        <h2 class="text-center">Отчет по складским/торговым местам</h2>
+        <div class="form-group" id="selectStoreForm">
+            <div class="form-group">
+                <label for="store">Выбрать склад</label>
+                <select id="store" name="SelectedStore" class="form-control" onchange="updateZones(this.value)">
+                    @foreach (var store in Model.Stores)
+                    {
+                        <option value="@store.Key" selected="@(store.Key == Model.SelectedStore ? "selected" : null)">
+                            @store.Value
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group" id="selectZoneForm">
+            <div class="form-group">
+                <label for="zone">Выбрать зону</label>
+                <select id="zone" name="SelectedZone" class="form-control">
+                    @foreach (var zone in Model.Zones)
+                    {
+                        <option value="@zone" selected="@(zone == Model.SelectedZone ? "selected" : null)">
+                            @zone
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-custom" id="executeButton" onclick="downloadExcelReport()">Выполнить</button>
+            <div id="loadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function updateZones(selectedStore) {
+        // Получаем токен для защиты от CSRF
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        // Показываем индикатор загрузки
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.style.display = 'block';
+
+        // Отправляем AJAX-запрос
+        fetch('ADSReportsPage?handler=GetZonesByStoreID', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: `selectedStore=${encodeURIComponent(selectedStore)}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Обновляем список зон
+                const zoneSelect = document.getElementById('zone');
+                zoneSelect.innerHTML = ''; // Очищаем текущие опции
+
+                // Добавляем новые опции
+                data.forEach(zone => {
+                    const option = document.createElement('option');
+                    option.value = zone;
+                    option.textContent = zone;
+                    zoneSelect.appendChild(option);
+                });
+                // Скрываем индикатор загрузки
+                loadingIndicator.style.display = 'none';
+            })
+            .catch(error => {
+                // Скрываем индикатор загрузки
+                loadingIndicator.style.display = 'none';
+                console.error('Ошибка при обновлении зон:', error);
+            });
+    }
+
+    function downloadExcelReport() {
+        const store = document.getElementById("store").value;
+        const zone = document.getElementById("zone").value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.style.display = 'block';
+
+        fetch('ADSReportsPage?handler=GetExcelReport', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: `selectedStore=${encodeURIComponent(store)}&selectedZone=${encodeURIComponent(zone)}`
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка при скачивании отчета');
+                }
+
+                // Получаем имя файла из заголовка Content-Disposition
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'Отчет.xlsx'; // Значение по умолчанию
+
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename\*?=['"]?(?:UTF-8'')?([^;'\"]+)/);
+                    if (match) {
+                        filename = decodeURIComponent(match[1]); // Декодируем, если имя файла передано в UTF-8
+                    }
+                }
+
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(({ blob, filename }) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+            })
+            .finally(() => {
+                loadingIndicator.style.display = 'none';
+            });
+    }
+</script>

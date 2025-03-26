@@ -1,0 +1,409 @@
+﻿@page
+@model WebADS.Pages.ADSPlaceSearchModel
+@{
+    ViewData["Title"] = "Поиск по месту";
+}
+
+<div class="container fade-in">
+    <div id="content">
+        <h2 class="text-center">Поиск по месту</h2>
+        <div class="form-group" id="selectStoreForm">
+            <div class="form-group">
+                <label for="store">Выбрать склад</label>
+                <select id="store" name="SelectedStore" class="form-control" onchange="updateZones(-1)">
+                    @foreach (var store in Model.Stores)
+                    {
+                        <option value="@store.Key" selected="@(store.Key == Model.SelectedStore ? "selected" : null)">
+                            @store.Value
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group" id="selectZoneForm">
+            <div class="form-group">
+                <label for="zone">Выбрать зону</label>
+                <select id="zone" name="SelectedZone" class="form-control" onchange="updateZones(0)">
+                    @foreach (var zone in Model.Zones)
+                    {
+                        <option value="@zone" selected="@(zone == Model.SelectedZone ? "selected" : null)">
+                            @zone
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group" id="selectRowForm">
+            <div class="form-group">
+                <label for="row">Выбрать ряд</label>
+                <select id="row" name="SelectedRow" class="form-control" onchange="updateZones(1)">
+                    @foreach (var row in Model.Rows)
+                    {
+                        <option value="@row" selected="@(row == Model.SelectedRow ? "selected" : null)">
+                            @row
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group" id="selectPlaceForm">
+            <div class="form-group">
+                <label for="place">Выбрать место</label>
+                <select id="place" name="SelectedPlace" class="form-control" onchange="updateZones(2)">
+                    @foreach (var place in Model.Places)
+                    {
+                        <option value="@place" selected="@(place == Model.SelectedPlace ? "selected" : null)">
+                            @place
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group" id="selectLevelForm">
+            <div class="form-group">
+                <label for="level">Выбрать уровень</label>
+                <select id="level" name="SelectedLevel" class="form-control" onchange="toggleQRCodeButton()">
+                    @foreach (var level in Model.Levels)
+                    {
+                        <option value="@level" selected="@(level == Model.SelectedLevel ? "selected" : null)">
+                            @level
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <!-- Кнопка для генерации QR-кода -->
+        <div class="d-flex justify-content-between">
+            <div id="qrContainer" style="display: none;">
+                <button type="button" class="btn btn-secondary" id="generateQRCodeButton" onclick="generateQRCode()">Сгенерировать QR-код</button>
+                <div id="qrCodeContainer" style="display: none;">
+                    <img id="qrCodeImage" src="" alt="QR код" />
+                    <a id="downloadQRCodeButton" href="#" download="qrcode.png" class="btn btn-info">Скачать QR-код</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-custom" id="executeButton" onclick="loadAddressesFromPlace()">Выполнить</button>
+            <div id="loadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Шаблон для адреса, который будет использоваться JavaScript -->
+        <div id="address-template" style="display: none;">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Артикул</th>
+                        <th>Наименование</th>
+                        <th>Кол-во</th>
+                        <th>Торг</th>
+                        <th>Осн</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody id="placeAddressTableBody">
+                    <!-- Данные будут добавлены через JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const storeSelect = document.getElementById('store');
+
+        // Добавить пустую опцию по умолчанию
+        const defaultOption = document.createElement('option');
+        defaultOption.value = ''; // Пустое значение
+        defaultOption.textContent = '-- Выберите значение --'; // Текст по умолчанию
+        defaultOption.selected = true; // Выбрать по умолчанию
+        defaultOption.disabled = true; // Сделать недоступным для выбора
+        defaultOption.hidden = true; // Скрыть из списка (опционально)
+        storeSelect.appendChild(defaultOption);
+    });   
+
+    // Функция для проверки выбранного значения и показа/скрытия блока с QR-кодом
+    function toggleQRCodeButton() {
+        const levelSelect = document.getElementById('level');
+        const qrContainer = document.getElementById('qrContainer');
+        const selectedLevel = levelSelect.value;
+
+        if (selectedLevel && selectedLevel !== 'all') {
+            // Если выбрано значение, не равное "all", показываем блок
+            qrContainer.style.display = 'block';
+        } else {
+            // Если выбрано "all" или ничего не выбрано, скрываем блок
+            qrContainer.style.display = 'none';
+        }
+    }
+
+    function updateZones(indicator) {
+        const store = document.getElementById("store").value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        // Значения для зон, рядов и мест, которые будут отправляться на сервер
+        let zone = indicator >= 0 ? document.getElementById("zone").value : "NoData";
+        let row = indicator >= 1 ? document.getElementById("row").value : "NoData";
+        let place = indicator >= 2 ? document.getElementById("place").value : "NoData";
+
+        // Индикатор загрузки
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.style.display = 'block';
+
+        // Очистить все поля ниже текущего индикатора (если был выбран магазин, то очищаем все последующие поля)
+        if (indicator === -1) {
+            clearFields(1);  // Очистить все поля ниже зоны
+        } else if (indicator === 0) {
+            clearFields(2);  // Очистить все поля ниже ряда
+        } else if (indicator === 1) {
+            clearFields(3);  // Очистить все поля ниже места
+        } else if (indicator === 2) {
+            clearFields(4);  // Очистить все поля ниже места
+        }
+
+        // Отправка запроса на сервер
+        fetch('ADSPlaceSearch?handler=GetValues', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: `selectedStore=${encodeURIComponent(store)}&selectedZone=${encodeURIComponent(zone)}&selectedRow=${encodeURIComponent(row)}&selectedPlace=${encodeURIComponent(place)}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                // В зависимости от индикатора обновляем поля
+                if (indicator === -1) {
+                    updateZoneSelect(data);  // Обновить список зон
+                } else if (indicator === 0) {
+                    updateRowSelect(data);  // Обновить список рядов
+                } else if (indicator === 1) {
+                    updatePlaceSelect(data);  // Обновить список мест
+                } else if (indicator === 2) {
+                    updateLevelSelect(data);  // Обновить список мест
+                }
+
+                loadingIndicator.style.display = 'none';
+            })
+            .catch(error => {
+                loadingIndicator.style.display = 'none';
+                console.error('Ошибка при обновлении данных:', error);
+            });
+    }
+
+    function clearFields(startFrom) {
+        if (startFrom <= 1) {
+            document.getElementById('zone').innerHTML = ''; // Очистить зоны
+        }
+        if (startFrom <= 2) {
+            document.getElementById('row').innerHTML = ''; // Очистить ряды
+        }
+        if (startFrom <= 3) {
+            document.getElementById('place').innerHTML = ''; // Очистить места
+        }
+        if (startFrom <= 4) {
+            document.getElementById('level').innerHTML = ''; // Очистить уровни
+        }
+    }
+
+    // Обновление списка зон
+    function updateZoneSelect(data) {
+        const zoneSelect = document.getElementById('zone');
+        zoneSelect.innerHTML = ''; // Очистить текущие опции
+
+        // Добавить пустую опцию по умолчанию
+        const defaultOption = document.createElement('option');
+        defaultOption.value = ''; // Пустое значение
+        defaultOption.textContent = '-- Выберите значение --'; // Текст по умолчанию
+        defaultOption.selected = true; // Выбрать по умолчанию
+        defaultOption.disabled = true; // Сделать недоступным для выбора
+        defaultOption.hidden = true; // Скрыть из списка (опционально)
+        zoneSelect.appendChild(defaultOption);
+
+        data.forEach(zone => {
+            const option = document.createElement('option');
+            option.value = zone;
+            option.textContent = zone;
+            zoneSelect.appendChild(option);
+        });
+    }
+
+    // Обновление списка рядов
+    function updateRowSelect(data) {
+        const rowSelect = document.getElementById('row');
+        rowSelect.innerHTML = ''; // Очистить текущие опции
+
+        // Добавить пустую опцию по умолчанию
+        const defaultOption = document.createElement('option');
+        defaultOption.value = ''; // Пустое значение
+        defaultOption.textContent = '-- Выберите значение --'; // Текст по умолчанию
+        defaultOption.selected = true; // Выбрать по умолчанию
+        defaultOption.disabled = true; // Сделать недоступным для выбора
+        defaultOption.hidden = true; // Скрыть из списка (опционально)
+        rowSelect.appendChild(defaultOption);
+
+        data.forEach(row => {
+            const option = document.createElement('option');
+            option.value = row;
+            option.textContent = row;
+            rowSelect.appendChild(option);
+        });
+    }
+
+    // Обновление списка мест
+    function updatePlaceSelect(data) {
+        const placeSelect = document.getElementById('place');
+        placeSelect.innerHTML = ''; // Очистить текущие опции
+
+        // Добавить пустую опцию по умолчанию
+        const defaultOption = document.createElement('option');
+        defaultOption.value = ''; // Пустое значение
+        defaultOption.textContent = '-- Выберите значение --'; // Текст по умолчанию
+        defaultOption.selected = true; // Выбрать по умолчанию
+        defaultOption.disabled = true; // Сделать недоступным для выбора
+        defaultOption.hidden = true; // Скрыть из списка (опционально)
+        placeSelect.appendChild(defaultOption);
+
+        data.forEach(place => {
+            const option = document.createElement('option');
+            option.value = place;
+            option.textContent = place;
+            placeSelect.appendChild(option);
+        });
+    }
+
+    function updateLevelSelect(data) {
+        const levelSelect = document.getElementById('level');
+        levelSelect.innerHTML = ''; // Очистить текущие опции
+
+        // Добавить пустую опцию по умолчанию
+        const defaultOption = document.createElement('option');
+        defaultOption.value = ''; // Пустое значение
+        defaultOption.textContent = '-- Выберите значение --'; // Текст по умолчанию
+        defaultOption.selected = true; // Выбрать по умолчанию
+        defaultOption.disabled = true; // Сделать недоступным для выбора
+        defaultOption.hidden = true; // Скрыть из списка (опционально)
+        levelSelect.appendChild(defaultOption);
+
+
+        data.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level;
+            option.textContent = level;
+            levelSelect.appendChild(option);
+        });
+    }
+
+    function loadAddressesFromPlace () {
+        const store = document.getElementById("store").value;
+        const zone = document.getElementById("zone").value;
+        const row = document.getElementById("row").value;
+        const place = document.getElementById("place").value;
+        const level = document.getElementById("level").value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.style.display = 'block';
+
+        fetch('ADSPlaceSearch?handler=GetAdressesByPlace', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: `selectedStore=${encodeURIComponent(store)}&selectedZone=${encodeURIComponent(zone)}&selectedRow=${encodeURIComponent(row)}&selectedPlace=${encodeURIComponent(place)}&selectedLevel=${encodeURIComponent(level)}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                updateAddressTable(data);
+                loadingIndicator.style.display = 'none';
+            })
+            .catch(error => {
+                loadingIndicator.style.display = 'none';
+                console.error('Ошибка при загрузке адресов:', error);
+            });
+    }
+
+    function updateAddressTable(addresses) {
+        const tableBody = document.getElementById("placeAddressTableBody");
+        tableBody.innerHTML = ""; // Очистка старых данных
+
+        if (addresses.length === 0) {
+            const noDataRow = document.createElement("tr");
+            noDataRow.innerHTML = '<td colspan="5" class="text-center">Нет данных</td>';
+            tableBody.appendChild(noDataRow);
+            return;
+        }
+
+        addresses.forEach(address => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                    <td>${address.article || '-'}</td>
+                    <td>${address.productName || '-'}</td>
+                    <td>${address.qty || '0'}</td>
+                    <td>${address.isSalesLocation ? '✔' : '✘'}</td>
+                    <td>${address.isPrimaryPlace ? '✔' : '✘'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="redirectToAdsSLM('${address.productID}')">Выбрать</button>
+                    </td>
+                `;
+
+            tableBody.appendChild(row);
+        });
+
+        // Показать таблицу, если она была скрыта
+        document.getElementById("address-template").style.display = "block";
+    }
+
+    // Функция для перенаправления на страницу AdsSLMModel с параметром moySkladId
+    function redirectToAdsSLM(moySkladId) {
+        window.location.href = `/AdsSLM?moySkladId=${moySkladId}`;
+    }
+
+    function generateQRCode() {
+        const storeSelect = document.getElementById("store");
+        const selectedStoreId = storeSelect.value;  // Это будет Id
+        const selectedOption = storeSelect.options[storeSelect.selectedIndex];
+        const store = selectedOption.text;  // Это будет имя, отображаемое в списке
+        const zone = document.getElementById("zone").value;
+        const row = document.getElementById("row").value;
+        const place = document.getElementById("place").value;
+        const level = document.getElementById("level").value;
+
+        const url = `https://valyashki.ru/ADSQR?store=${encodeURIComponent(store)}&zone=${encodeURIComponent(zone)}&row=${encodeURIComponent(row)}&place=${encodeURIComponent(place)}&level=${encodeURIComponent(level)}`;
+
+        // Генерация QR-кода с использованием библиотеки qrcode.js
+        QRCode.toDataURL(url, { width: 150, height: 150 }, function (err, url) {
+            if (err) {
+                console.error('Ошибка при генерации QR-кода:', err);
+                return;
+            }
+
+            // Устанавливаем изображение QR-кода
+            const qrCodeImage = document.getElementById("qrCodeImage");
+            qrCodeImage.src = url;
+
+            // Показываем контейнер с QR-кодом
+            document.getElementById("qrCodeContainer").style.display = 'block';
+
+            // Обновляем ссылку для скачивания
+            const downloadButton = document.getElementById("downloadQRCodeButton");
+            downloadButton.href = url;
+        });
+    }
+</script>

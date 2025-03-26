@@ -1,0 +1,412 @@
+﻿body {
+    background: linear-gradient(135deg, #f0f4f8, #e0eaf1); /* Светло-серый градиент */
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.login-container {
+    max-width: 800px;
+    margin: 5% auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #0058A1; /* Синий цвет */
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+h2, h3 {
+    color: #0058A1; /* Синий цвет */
+    font-weight: 500;
+}
+
+.form-floating input {
+    border: 1px solid #d1d5db; /* Серый цвет */
+    border-radius: 8px;
+    padding: 12px;
+    transition: border-color 0.3s ease;
+}
+
+    .form-floating input:focus {
+        border-color: #0058A1; /* Синий цвет */
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1); /* Светло-синяя тень */
+    }
+
+.form-floating label {
+    color: #6b7280; /* Серый цвет */
+    font-weight: 400;
+}
+
+.btn-primary {
+    background: #0058A1; /* Синий цвет */
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 500;
+    transition: background 0.3s ease;
+}
+
+    .btn-primary:hover {
+        background: #1557b5; /* Темно-синий цвет */
+    }
+
+.btn-danger {
+    border-radius: 8px;
+}
+
+.checkbox label {
+    color: #4b5563; /* Серый цвет */
+}
+
+a {
+    color: #0058A1; /* Синий цвет */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+    a:hover {
+        color: #1557b5; /* Темно-синий цвет */
+    }
+
+.external-login-buttons .btn {
+    margin: 5px;
+    background: #ffffff;
+    border: 1px solid #d1d5db; /* Серый цвет */
+    color: #0058A1; /* Синий цвет */
+    transition: all 0.3s ease;
+}
+
+    .external-login-buttons .btn:hover {
+        background: #0058A1; /* Синий цвет */
+        color: white;
+        border-color: #1a73e8;
+    }
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #6b7280; /* Серый цвет */
+    margin: 1.5rem 0;
+}
+
+    .divider::before, .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #d1d5db; /* Серый цвет */
+    }
+
+    .divider::before {
+        margin-right: 1rem;
+    }
+
+    .divider::after {
+        margin-left: 1rem;
+    }
+
+.responsive-image {
+    max-width: 100%;
+    height: auto;
+    display: block; /* Чтобы избежать пустого пространства под изображением */
+}
+
+.navbar {
+    background: linear-gradient(135deg, #000000, #222222); /* Черный градиент */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Сделал тень чуть заметнее */
+}
+
+.navbar-brand, .nav-link, .dropdown-item {
+    color: white !important; /* Белый текст */
+    transition: color 0.3s ease;
+}
+
+    .navbar-brand:hover, .nav-link:hover, .dropdown-item:hover {
+        color: #f0f4f8 !important; /* Светло-серый при наведении */
+    }
+
+.navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.5); /* Белая рамка для кнопки */
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='lightblue' stroke-width='2' stroke-linecap='round' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
+}
+
+.dropdown-menu {
+    background-color: #1a73e8; /* Синий фон для выпадающего меню */
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+    color: white !important; /* Белый текст в выпадающем меню */
+}
+
+    .dropdown-item:hover {
+        background-color: #1557b5; /* Темно-синий при наведении */
+    }
+
+.dropdown-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.1); /* Светлая линия-разделитель */
+}
+
+.navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+}
+
+    .navbar-nav .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1); /* Легкий белый фон при наведении */
+    }
+
+.navbar-nav .nav-item.active .nav-link {
+    background-color: rgba(255, 255, 255, 0.2); /* Активный пункт меню */
+}
+
+.input-group {
+    display: flex;
+    max-width: 400px;
+    gap: 5px;
+}
+
+.table {
+    margin-top: 20px;
+}
+
+.form-select {
+    display: inline-block;
+    width: auto;
+    margin-right: 5px;
+}
+
+
+/*.container {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;*/
+    /*background: #f8f9fa;*/
+    /*border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}*/
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.form-group {
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 10px;
+    font-size: 16px;
+}
+
+    .form-control:read-only {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
+
+/* Стили для картинки */
+.image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
+.product-image {
+    max-width: 100%;
+    height: auto;
+    max-height: 200px; /* Фиксированная высота для картинки */
+    border-radius: 8px;
+    object-fit: cover; /* Сохраняет пропорции картинки */
+}
+
+.search-results {
+    margin-top: 20px;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #212529;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.table th,
+.table td {
+    padding: 0.2rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}
+
+.table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.btn-custom {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+    .btn-custom:hover {
+        background-color: #0056b3;
+    }
+
+/* Стили для контейнера адресов */
+#addresses-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Расстояние между блоками */
+}
+
+/* Стили для каждого блока адреса */
+.address-block {
+    border: 1px solid #ddd; /* Граница вокруг блока */
+    border-radius: 8px; /* Закругленные углы */
+    padding: 20px; /* Внутренние отступы */
+    background-color: #f9f9f9; /* Фон блока */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Тень */
+}
+
+    /* Стили для строк (rows) внутри блока */
+    .address-block .row {
+        margin-bottom: 5px; /* Отступ между строками */
+    }
+
+    /* Стили для кнопок */
+    .address-block .actions {
+        display: flex;
+        gap: 10px; /* Расстояние между кнопками */
+        margin-top: 20px; /* Отступ сверху */
+    }
+
+        .address-block .actions button {
+            flex: 1; /* Кнопки занимают равное пространство */
+        }
+
+.edit-mode {
+    background-color: #42aaff; /* Светло-голубой цвет */
+}
+
+/* Стили для JSON-строк */
+.json-string {
+    white-space: pre-wrap;
+    font-family: monospace;
+    background-color: #f8f9fa;
+    padding: 5px;
+    border-radius: 5px;
+}
+/* Стили для контейнера кнопок */
+.button-container {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 12px; /* Больше отступов */
+    border-top: 1px solid #dee2e6; /* Граница сверху */
+}
+
+    /* Стили для кнопок */
+    .button-container .btn {
+        padding: 6px 12px; /* Размер кнопок */
+        font-size: 14px; /* Размер текста */
+    }
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.input-container {
+    position: relative;
+    display: inline-block;
+    width: 100%; /* Чтобы контейнер занимал всю ширину */
+}
+
+.clear-button {
+    position: absolute;
+    right: 10px; /* Отступ справа */
+    top: 50%;
+    transform: translateY(-50%); /* Центрирование по вертикали */
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #ccc; /* Цвет крестика */
+    padding: 0;
+    line-height: 1;
+    opacity: 0; /* Начальная прозрачность */
+    transition: opacity 0.3s ease; /* Плавное появление */
+}
+
+    .clear-button:not(.hidden) {
+        opacity: 1; /* Показываем кнопку, если она не скрыта */
+    }
+
+    .clear-button:hover {
+        color: #333; /* Цвет крестика при наведении */
+    }
+

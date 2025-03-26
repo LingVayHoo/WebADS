@@ -1,0 +1,439 @@
+﻿@page
+@using WebADS.Services
+@model WebADS.Pages.AdsSLMModel
+@{
+    ViewData["Title"] = "Адресное хранение";
+
+    // Получаем данные о складах из сессии
+    var stores = Model.Stores;
+}
+
+
+<div class="container fade-in">
+
+    <!-- Передаем данные о складах в JavaScript -->
+    <div id="stores-data" data-stores='@Json.Serialize(stores)'></div>
+
+    <script src="~/adsjs/selectproduct.js"></script>
+    <script src="~/adsjs/addresses.js"></script>
+    <!-- Сообщение о загрузке -->
+    <div id="loadingMessage" class="text-center">
+        <p>Данные загружаются...</p>
+    </div>
+
+
+
+    <!-- Основное содержимое (скрыто до загрузки) -->
+    <div id="content" style="display: none;">
+        <h2 class="text-center">Управление торговыми местами</h2>
+
+        <div class="form-group">
+            <!-- На странице деталей (DetailsPage.cshtml) -->
+            <a href="/ADSIndex" class="btn btn-custom float-end mb-3">Назад</a>
+        </div>
+
+        <div class="form-group" id="selectStoreForm">
+            <div class="form-group">
+                <label for="store">Сменить склад</label>
+                <select id="store" name="SelectedStore" class="form-control">
+                    @foreach (var store in Model.Stores)
+                    {
+                        <option value="@store.Key" selected="@(store.Key == Model.SelectedStore ? "selected" : null)">
+                            @store.Value
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-custom" onclick="submitStoreForm()">Выбрать склад</button>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group">
+            <!-- Первый ряд: Article и ProductName -->
+            <div class="row mb-1">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="article">Артикул</label>
+                        <input type="text" id="article" name="SelectedArticle.Article" class="form-control" value="???" readonly />
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label for="productName">Название</label>
+                        <input type="text" id="productName" name="SelectedArticle.Name" class="form-control" value="???" readonly />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопка для открытия модального окна -->
+        <button id="showHistoryButton" type="button" class="btn btn-primary">
+            Показать историю изменений
+        </button>
+
+        <div class="form-group" id="imageContainer">
+            <label>Изображение</label>
+            <div class="image-container text-center">
+                <img src="???" alt="Изображение продукта" class="product-image img-fluid" id="productImage" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="artStock">Всего</label>
+                        <input type="text" id="artStock" name="artStock" class="form-control" readonly />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="artReserve">Из них в резерве</label>
+                        <input type="text" id="artReserve" name="artReserve" class="form-control" readonly />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="openparametersModal">
+            Параметры
+        </button>
+
+        <button type="button" class="btn btn-success" id="openCreateAddressModal">
+            Создать новый адрес
+        </button>
+    </div>
+
+    <!-- Шаблон для адреса, который будет использоваться JavaScript -->
+    <div id="address-template" style="display: none;">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Склад</th>
+                    <th>Зона</th>
+                    <th>Локация</th>
+                    <th>Кол-во</th>
+                    <th>Торг</th>
+                    <th>Осн</th>
+                </tr>
+            </thead>
+            <tbody id="addressTableBody">
+                <!-- Данные будут добавлены через JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Контейнер для отображения списка адресов -->
+    <div id="addresses-container">
+        <!-- Блоки адресов будут динамически добавляться через JavaScript -->
+    </div>
+
+    <div id="confirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <div id="modalMessage"></div>
+            <button type="button" class="btn btn-danger" id="modalCancel">Отмена</button>
+            <button type="button" class="btn btn-primary" id="modalConfirm">Ok</button>
+        </div>
+    </div>
+
+    <div id="alertModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <div id="alertmodalMessage"></div>
+            <button type="button" class="btn btn-primary" id="alertmodalConfirm">Ok</button>
+        </div>
+    </div>
+
+
+
+    <!-- Модальное окно для истории -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historyModalLabel">История изменений</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Тип изменения</th>
+                                <th>Старые значения</th>
+                                <th>Новые значения</th>
+                                <th>Дата изменения</th>
+                                <th>Изменено</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Данные будут добавлены с помощью JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для параметров артикула -->
+    <div class="modal fade" id="parametersModal" tabindex="-1" aria-labelledby="parametersModal" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="parametersModalLabel">Параметры артикула</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="parametersForm">
+                        <div>
+                            <input type="hidden" id="addressId" name="recordId" value="" />
+                            <input type="hidden" id="productID" name="productID" value="" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="aws" class="form-label">Средние недельные продажи</label>
+                            <input type="text" class="form-control" id="aws" name="AWS" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="salesMethod" class="form-label">Метод продаж</label>
+                            <input type="text" class="form-control" id="salesMethod" name="SalesMethod" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="minSalesQty" class="form-label">Минимальное количество продаж</label>
+                            <input type="text" class="form-control" id="minSalesQty" name="MinSalesQty" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="multipackQty" class="form-label">В мультипаке</label>
+                            <input type="text" class="form-control" id="multipackQty" name="MultipackQty" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="palletQty" class="form-label">В паллете</label>
+                            <input type="text" class="form-control" id="palletQty" name="PalletQty" required />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отменить</button>
+                    <button type="button" class="btn btn-primary" id="updateParametersButton">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для создания адреса -->
+    <div class="modal fade" id="createAddressModal" tabindex="-1" aria-labelledby="createAddressModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createAddressModalLabel">Создание нового адреса</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Форма для создания адреса -->
+                    <form id="createAddressForm">
+                        <div>
+                            <input type="hidden" id="addressId" name="addressId" value="" />
+                            <input type="hidden" id="productID" name="productID" value="" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="article" class="form-label">Артикул</label>
+                            <input type="text" class="form-control" id="article" name="Article" required readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label for="productName" class="form-label">Наименование</label>
+                            <input type="text" class="form-control" id="productName" name="ProductName" required readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label for="storeID" class="form-label">Склад</label>
+                            <select class="form-control" id="storeID" name="StoreID" required>
+                                <!-- Опции будут добавлены через JavaScript -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="zone" class="form-label">Зона</label>
+                            <input type="text" class="form-control" id="zone" name="Zone" required />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="row" class="form-label">Ряд</label>
+                                <input type="text" class="form-control" id="row" name="Row" placeholder="Ряд" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="place" class="form-label">Место</label>
+                                <input type="text" class="form-control" id="place" name="Place" placeholder="Место" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="level" class="form-label">Уровень</label>
+                                <input type="text" class="form-control" id="level" name="Level" placeholder="Уровень" required />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="qty" class="form-label">Количество</label>
+                            <input type="number" class="form-control" id="qty" name="Qty" required />
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="isPrimaryPlace" name="IsPrimaryPlace" />
+                            <label class="form-check-label" for="isPrimaryPlace">Основное место</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="isSalesLocation" name="IsSalesLocation" />
+                            <label class="form-check-label" for="isSalesLocation">Торговое место</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отменить</button>
+                    <button type="button" class="btn btn-primary"  id="confirmCreateAddress">Подтвердить</button>
+                    <button type="button" class="btn btn-primary" id="confirmEditAddress">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var moySkladId = "@Model.MoySkladId";
+            if (moySkladId) {
+                selectProduct(moySkladId);
+            }
+
+            document.getElementById('showHistoryButton').addEventListener('click', () => {
+                const article = document.getElementById('article').value;
+                loadHistoryByArticle(article);
+            });
+            document.getElementById('updateParametersButton').addEventListener('click', () => {
+                updateParameters();
+            });
+
+            
+
+            // Открытие модального окна
+            document.getElementById('openCreateAddressModal').addEventListener('click', () => {
+                // Получаем модальное окно
+                const modalElement = document.getElementById('createAddressModal');
+                const modal = new bootstrap.Modal(modalElement);
+
+                // Получаем данные о складах из HTML-элемента
+                const storesData = document.getElementById('stores-data').dataset.stores;
+                const stores = JSON.parse(storesData); // Преобразуем JSON в массив значений
+
+                // Получаем выпадающий список для StoreID
+                const storeSelect = modalElement.querySelector('#storeID');
+
+                // Очищаем список перед заполнением
+                storeSelect.innerHTML = '';
+
+                const storesArray = Object.values(stores);
+
+                // Заполняем выпадающий список опциями
+                storesArray.forEach(store => {
+                    const option = document.createElement('option');
+                    option.value = store; // Значение опции
+                    option.textContent = store; // Текст опции
+                    storeSelect.appendChild(option);
+                });
+
+                // Получаем поля внутри модального окна
+                const articleField = modalElement.querySelector('#article');
+                const nameField = modalElement.querySelector('#productName');
+
+                // Получаем значения артикула и названия из внешних элементов
+                const article = document.getElementById('article').value;
+                const name = document.getElementById('productName').value;
+
+                var isSalesLocationCheckbox = document.getElementById('isSalesLocation');
+                var qtyLabel = document.querySelector('label[for="qty"]');
+
+                isSalesLocationCheckbox.addEventListener('change', function () {
+                    if (this.checked) {
+                        qtyLabel.textContent = 'Вместимость';
+                    } else {
+                        qtyLabel.textContent = 'Количество';
+                    }
+                });
+
+
+                // Заполняем поля в модальном окне
+                articleField.value = article;
+                nameField.value = name;
+
+                const createButton = document.getElementById('confirmCreateAddress');
+                createButton.style.display = 'block';
+
+                const editButton = document.getElementById('confirmEditAddress');
+                editButton.style.display = 'none';
+
+                // Показываем модальное окно
+                modal.show();
+            });
+
+            //Подтверждение создания адреса
+            document.getElementById('confirmCreateAddress').addEventListener('click', () => {
+                createAddress();
+            });
+            const modalElement = document.getElementById('createAddressModal');
+            document.getElementById('confirmEditAddress').addEventListener('click', () => {
+                saveAddress(modalElement);
+            });
+
+            document.getElementById('openparametersModal').addEventListener('click', () => {
+                if (moySkladId) {
+                    getParameters(moySkladId);
+                }
+            });
+
+
+        });
+
+        // Функция для отображения содержимого после загрузки данных
+        function showContent() {
+            document.getElementById('loadingMessage').style.display = 'none'; // Скрываем сообщение о загрузке
+            document.getElementById('content').style.display = 'block'; // Показываем основное содержимое
+        }
+
+        function updateParameters() {
+            // Получаем существующий экземпляр модального окна
+            const modalElement = document.getElementById('parametersModal');
+            const modal = bootstrap.Modal.getInstance(modalElement); // Получаем текущий экземпляр
+
+            const articleParameters = {
+                ProductID: modalElement.querySelector('#productID').value,
+                AWS: modalElement.querySelector('#aws').value,
+                SalesMethod: modalElement.querySelector('#salesMethod').value,
+                MinSalesQty: modalElement.querySelector('#minSalesQty').value,
+                MultipackQty: modalElement.querySelector('#multipackQty').value,
+                PalletQty: modalElement.querySelector('#palletQty').value
+            };
+
+            console.log(articleParameters);
+
+            fetch('/ADSSLM?handler=UpdateArticleParams', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(articleParameters)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        showAlertModal('Параметры успешно обновлены!');
+                    } else {
+                        showAlertModal('Не удалось обновить параметры.');
+                    }
+                    if (modal) modal.hide(); // Закрываем окно только если экземпляр найден
+                })
+                .catch(error => {
+                    console.error('Ошибка при обновлении параметров:', error);
+                    showAlertModal('Произошла ошибка при обновлении параметров.');
+                    if (modal) modal.hide();
+                });
+        }
+
+    </script>    
+}

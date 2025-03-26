@@ -1,0 +1,57 @@
+﻿@page
+@model ADSIndexModel
+@{
+    ViewData["Title"] = "Адресное хранение";
+}
+
+<div class="container fade-in">
+    <h2 class="text-center">Адресное хранение</h2>
+
+    <form method="post">
+        <div class="form-group">
+            <label for="search">Поиск</label>
+            <div class="input-container">
+                <input type="text" id="search" name="search" class="form-control" placeholder="Введите запрос" />
+                <button id="clearSearch" class="clear-button hidden" aria-label="Очистить поле">×</button>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-custom" id="searchButton">Поиск</button>
+            <div id="loadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </form>
+
+    <hr />
+
+    <!-- Блок для результатов поиска -->
+    <div class="search-results-block mt-4" style="display: none;">
+        <h5 class="mb-3">Результаты поиска</h5>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Артикул</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="searchResultsBody">
+                <!-- Результаты поиска будут здесь -->
+            </tbody>
+        </table>
+        <div class="mt-3">
+            <button type="button" class="btn btn-secondary" onclick="clearSearchResults()">Очистить результаты</button>
+        </div>
+    </div>
+
+    <!-- Контейнер для отображения списка адресов -->
+    <div id="addresses-container">
+        <!-- Блоки адресов будут динамически добавляться через JavaScript -->
+    </div>
+
+    <script src="~/adsjs/search.js"></script>
+    <script src="~/adsjs/store.js"></script>
+    <script src="~/adsjs/addresses.js"></script>
+</div>

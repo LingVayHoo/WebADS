@@ -1,0 +1,176 @@
+﻿@page
+@model WebADS.Pages.ADSAllocationModel
+@{
+    ViewData["Title"] = "Allocation";
+}
+
+<div class="container fade-in">
+    <div id="content">
+        <h2 class="text-center">Распределение по складам</h2>
+
+        <div class="form-group" id="selectFromStoreForm">
+            <div class="form-group">
+
+                <label for="storeFrom">Со склада</label>
+                <select id="storeFrom" name="SelectedFromStore" class="form-control">
+                    @foreach (var store in Model.Stores)
+                    {
+                        <option value="@store.Key" selected="@(store.Key == Model.SelectedStoreFrom ? "selected" : null)">
+                            @store.Value
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+
+        <div class="form-group" id="selectToStoreForm">
+            <div class="form-group">
+
+                <label for="storeTo">На склад</label>
+                <select id="storeTo" name="SelectedToStore" class="form-control">
+                    @foreach (var store in Model.Stores)
+                    {
+                        <option value="@store.Key" selected="@(store.Key == Model.SelectedStoreTo ? "selected" : null)">
+                            @store.Value
+                        </option>
+                    }
+                </select>
+            </div>
+            @Html.AntiForgeryToken()
+        </div>
+           
+        <div class="form-group">
+            <label for="minQty">Минимальное количество</label>
+            <input type="text" id="minQty" class="form-control"/>
+        </div> 
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-custom" id="executeButton" onclick="getAllocation()">Выполнить</button>
+            <div id="loadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Шаблон для allocation, который будет использоваться JavaScript -->
+        <div id="allocation-template" style="display: none;">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Артикул</th>
+                        <th>Наименование</th>
+                        <th>У отправителя</th>
+                        <th>У получателя</th>
+                        <th>MPack</th>
+                        <th>Пакс</th>
+                    </tr>
+                </thead>
+                <tbody id="allocationTableBody">
+                    <!-- Данные будут добавлены через JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <button id="downloadExcelBtn" style="display: none;" class="btn btn-success">Скачать Excel</button>
+
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</div>
+
+<script>
+
+    function getAllocation () {
+        const storeFrom = document.getElementById("storeFrom").value;
+        const storeTo = document.getElementById("storeTo").value;
+        const minQty = document.getElementById("minQty").value;
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.style.display = 'block';
+
+        fetch('ADSAllocation?handler=GetAllocationInfo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: `storeFrom=${encodeURIComponent(storeFrom)}&storeTo=${encodeURIComponent(storeTo)}&minQty=${encodeURIComponent(minQty)}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                showResult(data);
+                loadingIndicator.style.display = 'none';
+            })
+            .catch(error => {
+                loadingIndicator.style.display = 'none';
+                console.error('Ошибка при загрузке адресов:', error);
+            });
+    }
+
+    document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
+
+    function downloadExcel() {
+        const table = document.getElementById("allocationTableBody").parentElement;
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.table_to_sheet(table);
+
+        // Заголовки (берем из таблицы)
+        const headers = Array.from(table.getElementsByTagName("th")).map(th => th.innerText);
+
+        // Добавляем заголовки в Excel (затираем первую строку)
+        XLSX.utils.sheet_add_aoa(ws, [headers], { origin: "A1" });
+
+        // Автоширина колонок
+        const colWidths = headers.map((_, colIndex) => ({
+            wch: Math.max(
+                headers[colIndex].length, // Длина заголовка
+                ...Array.from({ length: table.rows.length }, (_, rowIndex) =>
+                    table.rows[rowIndex].cells[colIndex]?.innerText.length || 0
+                )
+            )
+        }));
+        ws["!cols"] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, "Allocations");
+        XLSX.writeFile(wb, "allocations.xlsx");
+    }
+
+    function showResult(articles) {
+        const tableBody = document.getElementById("allocationTableBody");
+        tableBody.innerHTML = ""; // Очистка старых данных
+
+        if (articles.length === 0) {
+            const noDataRow = document.createElement("tr");
+            noDataRow.innerHTML = '<td colspan="6" class="text-center">Нет данных</td>';
+            tableBody.appendChild(noDataRow);
+            document.getElementById("downloadExcelBtn").style.display = "none";
+            return;
+        }
+
+        articles.forEach(art => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                    <td>${art.article || '-'}</td>
+                    <td>${art.articleName || '-'}</td>
+                    <td>${art.fromStoreQty || '0'}</td>
+                    <td>${art.toStoreQty || '0'}</td>
+                    <td>${art.multipack || '0'}</td>
+                    <td>${art.isWardrobe ? '✔' : '✘'}</td>
+                `;
+            tableBody.appendChild(row);
+        });
+
+        // Показать таблицу и кнопку скачивания
+        document.getElementById("allocation-template").style.display = "block";
+        document.getElementById("downloadExcelBtn").style.display = "inline-block";
+    }
+
+</script>
+<style>
+    #allocationTable thead {
+        background-color: black;
+        color: white;
+    }
+</style>
+
